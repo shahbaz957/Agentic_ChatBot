@@ -7,3 +7,5 @@ tavily-python
 faiss-cpu
 streamlit
 sentence-transformer
+arxiv
+wikipedia
