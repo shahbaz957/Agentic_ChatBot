@@ -1,6 +1,7 @@
 from src.langgraphagenticai.state.state_graph import State
 from langchain_core.messages import AIMessage
-
+import streamlit as st
+from langchain_core.messages import HumanMessage ,AIMessage
 class BasicChatBotNode:
     """
     Basic Chatbot Logic Implementation
@@ -11,11 +12,18 @@ class BasicChatBotNode:
         """
         Process the input and generate the Chatbot Response
         """
-        # Invoke the model and ensure the response is an AIMessage
-        response = self.llm.invoke(state['messages'])
-        # Ensure response is an AIMessage (ChatGroq should return AIMessage)
-        if isinstance(response, AIMessage):
-            return {"messages": response}
-        else:
-            # Fallback: manually create AIMessage from response content
-            return {"messages": AIMessage(content=str(response.content))}
+         # Get the latest user input
+        user_input = state['messages'][-1].content
+
+        # Append latest user message to session history
+        st.session_state.chat_history.append(HumanMessage(content=user_input))
+
+        # Send entire history to the LLM
+        response = self.llm.invoke(st.session_state.chat_history)
+
+        # Append AI response
+        ai_message = response if isinstance(response, AIMessage) else AIMessage(content=str(response.content))
+        st.session_state.chat_history.append(ai_message)
+
+        # Return the full updated message history
+        return {"messages": st.session_state.chat_history}

@@ -16,15 +16,24 @@ class DisplayResultsStreamlit:
         if usecase == "Basic ChatBot":
             try:
                 # Use HumanMessage instead of tuple
-                result = graph.invoke({'messages': [HumanMessage(content=user_message)]})
+                if "chat_history" not in st.session_state:
+                    st.session_state.chat_history = []
+
+                st.session_state.chat_history.append(HumanMessage(content=user_message))
+                result = graph.invoke({'messages' : st.session_state.chat_history})
+                if isinstance(result['messages'], list):
+                    response_message = result['messages'][-1]
+                else:
+                    response_message = result['messages']
+                st.session_state.chat_history.append(response_message)
+
+        # Display user message
                 with st.chat_message("user"):
                     st.write(user_message)
+
+        # Display AI response
                 with st.chat_message("assistant"):
-                    # Extract the last message's content
-                    if isinstance(result['messages'], list):
-                        st.write(result['messages'][-1].content)
-                    else:
-                        st.write(result['messages'].content)
+                    st.write(response_message.content)
             except Exception as e:
                 st.error(f"Error displaying result: {e}")
         elif usecase == "ChatBot with Web":
@@ -33,32 +42,18 @@ class DisplayResultsStreamlit:
                 result = graph.invoke(initial_state)
                 
                 for message in result["messages"]:
-                    if isinstance(message, HumanMessage):
-                        with st.chat_message("user"):
-                            st.write(message.content)
-                    elif isinstance(message, ToolMessage):
+                    # if isinstance(message, HumanMessage):
+                    #     with st.chat_message("user"):
+                    #         st.write(message.content)
+                    if isinstance(message, ToolMessage):
                         with st.chat_message("ai"):
                             st.write("**Tool Call Start**")
-                            try:
-                                # Parse JSON content
-                                articles = json.loads(message.content)
-                                if isinstance(articles, list):
-                                    # Format each article
-                                    for article in articles:
-                                        st.markdown(f"### {article.get('title', 'Untitled')}")
-                                        st.write(f"**URL**: {article.get('url', 'No URL')}")
-                                        st.write(f"**Score**: {article.get('score', 'N/A')}")
-                                        st.write(f"**Content**: {article.get('content', 'No content')}")
-                                        st.write("---")
-                                else:
-                                    st.write(articles)  # Fallback for non-list content
-                            except json.JSONDecodeError:
-                                st.write("Error: Could not parse tool response")
-                                st.write(message.content)
-                            st.write("**Tool Call End**")
-                    elif isinstance(message, AIMessage) and message.content:
-                        with st.chat_message("assistant"):
                             st.write(message.content)
+                            st.write("**Tool Call End**")
+                    # elif isinstance(message, AIMessage) and message.content:
+                    #     with st.chat_message("assistant"):
+                    #         st.write(message.content)
+                    st.write(message.content)
 
         elif usecase == "AI News":
             frequency = self.user_message
